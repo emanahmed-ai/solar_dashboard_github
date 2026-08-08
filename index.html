@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Power Operations — Executive Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.3/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#0F172A; --card:#1E293B; --card2:#243044;
+  --green:#22C55E; --blue:#3B82F6; --yellow:#FACC15; --orange:#F97316; --red:#EF4444;
+  --text:#E5E9F0; --muted:#8A94A6; --border:rgba(255,255,255,0.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% 0%,#14213d 0%,var(--bg) 45%) fixed;color:var(--text);font-family:'Segoe UI',-apple-system,'Inter',sans-serif;padding:28px 32px 60px}
+h1,h2,h3{margin:0;font-weight:600}
+.header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.header .title{font-size:23px;letter-spacing:.2px}.header .sub{color:var(--muted);font-size:12.5px;margin-top:4px}
+.pill{background:var(--card);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:18px}
+.kpi{grid-column:span 1;background:linear-gradient(160deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 8px 24px -12px rgba(0,0,0,.6);position:relative;overflow:hidden}
+.kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}.kpi .val{font-size:23px;font-weight:700;margin-top:6px}.kpi .delta{font-size:11.5px;margin-top:5px}
+.up{color:var(--green)}.down{color:var(--red)}.flat{color:var(--yellow)}
+.panels{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}.panels3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:linear-gradient(160deg,var(--card) 0%,#1a2436 100%);border:1px solid var(--border);border-radius:18px;padding:18px 20px 14px;box-shadow:0 10px 30px -14px rgba(0,0,0,.65)}
+.chead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.chead h3{font-size:14px;color:#fff}.tag{font-size:10.5px;color:var(--muted);background:rgba(255,255,255,.05);padding:3px 9px;border-radius:8px}
+.chart-wrap{position:relative;height:230px;margin-top:8px}.chart-wrap.sm{height:170px}
+.legend-row{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:2px}.legend-row span{display:inline-flex;align-items:center;gap:6px}.sw{width:9px;height:9px;border-radius:3px;display:inline-block}
+.gauge-wrap{display:flex;justify-content:space-around;align-items:center;height:170px}.gauge{position:relative;width:118px;height:118px}.gauge .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge .num b{font-size:19px}.gauge .num small{font-size:10px;color:var(--muted);margin-top:2px;text-align:center;line-height:1.2}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--muted);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--border)}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.badge{padding:2px 8px;border-radius:7px;font-size:10.5px;font-weight:600}.badge.g{background:rgba(34,197,94,.15);color:var(--green)}.badge.r{background:rgba(239,68,68,.15);color:var(--red)}.badge.y{background:rgba(250,204,21,.15);color:var(--yellow)}
+.alert-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12.5px}.alert-left{display:flex;align-items:center;gap:10px}.alert-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}.alert-id{color:var(--muted);font-size:11px}.count-chip{background:rgba(239,68,68,.14);color:var(--red);font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px}
+.insight-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}.insight-note b{color:#cfd6e4}
+.status{color:var(--muted);font-size:11px;margin:0 0 12px}.error{color:#fecaca;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);padding:12px;border-radius:10px;display:none}
+footer{text-align:center;color:var(--muted);font-size:11px;margin-top:20px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}.panels,.panels3{grid-template-columns:1fr}}
+@media(max-width:650px){body{padding:18px 12px 40px}.grid{grid-template-columns:1fr 1fr}.kpi{grid-column:span 1}.header .title{font-size:19px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="title">☀ Solar Power Operations — Executive Dashboard</div>
+    <div class="sub" id="subtitle">Loading solar telemetry…</div>
+  </div>
+  <div class="pill"><span class="dot"></span><span id="dataStatus">Loading data…</span></div>
+</div>
+
+<div id="errorBox" class="error"></div>
+
+<div class="grid">
+  <div class="kpi"><div class="lbl">Total AC Energy</div><div class="val" id="kpiEnergy">—</div><div class="delta flat">Fleet output, period-to-date</div></div>
+  <div class="kpi"><div class="lbl">Avg AC Power</div><div class="val" id="kpiAvgAC">—</div><div class="delta up">▲ core operating KPI</div></div>
+  <div class="kpi"><div class="lbl">Avg Irradiation</div><div class="val" id="kpiIrr">—</div><div class="delta flat" id="irrDelta">strongest AC driver</div></div>
+  <div class="kpi"><div class="lbl">Avg Module Temp</div><div class="val" id="kpiMod">—</div><div class="delta up" id="tempDelta">—</div></div>
+  <div class="kpi"><div class="lbl">Best Plant (AC avg)</div><div class="val" id="kpiBest" style="color:var(--green)">—</div><div class="delta up" id="bestDelta">—</div></div>
+  <div class="kpi"><div class="lbl">Underperf. Alerts</div><div class="val" id="kpiAlerts" style="color:var(--red)">—</div><div class="delta down">daylight zero-output events</div></div>
+</div>
+
+<div class="panels">
+  <div class="card">
+    <div class="chead"><h3>Hourly Generation Profile — Avg AC Power</h3><span class="tag">Peak Production Hours</span></div>
+    <div class="legend-row"><span><i class="sw" style="background:var(--blue)"></i>Plant_1</span><span><i class="sw" style="background:var(--yellow)"></i>Plant_2</span></div>
+    <div class="chart-wrap"><canvas id="hourlyChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chead"><h3>DC → AC Conversion Ratio</h3><span class="tag">Data Quality Flag</span></div>
+    <div class="gauge-wrap">
+      <div class="gauge"><canvas id="gaugeP1"></canvas><div class="num"><b id="ratioP1">—</b><small>Plant_1<br>(sensor scale nominal)</small></div></div>
+      <div class="gauge"><canvas id="gaugeP2"></canvas><div class="num"><b id="ratioP2">—</b><small>Plant_2<br>(DC sensor scale issue)</small></div></div>
+    </div>
+    <div class="insight-note"><b>Note:</b> Plant_2's DC_POWER is recorded on a ~1/10 scale vs Plant_1 (same AC output range, DC ~10x lower). This is a metering/units inconsistency, not a real efficiency gap.</div>
+  </div>
+</div>
+
+<div class="panels">
+  <div class="card">
+    <div class="chead"><h3>Daily Yield Trend by Plant</h3><span class="tag" id="trendTag">Daily Trend</span></div>
+    <div class="legend-row"><span><i class="sw" style="background:var(--blue)"></i>Plant_1</span><span><i class="sw" style="background:var(--yellow)"></i>Plant_2</span></div>
+    <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chead"><h3>Environmental Drivers</h3><span class="tag">Correlation to AC Power</span></div>
+    <div class="chart-wrap sm"><canvas id="corrChart"></canvas></div>
+    <div class="insight-note" id="corrNote">Calculating correlations…</div>
+  </div>
+</div>
+
+<div class="panels3">
+  <div class="card">
+    <div class="chead"><h3>Plant_1 Inverters</h3><span class="tag">Top / Bottom 5 · Avg AC kW</span></div>
+    <table><thead><tr><th>Inverter</th><th>Avg AC</th><th>Status</th></tr></thead><tbody id="plant1Table"></tbody></table>
+    <div class="insight-note" id="plant1Note"></div>
+  </div>
+  <div class="card">
+    <div class="chead"><h3>Plant_2 Inverters</h3><span class="tag">Top / Bottom 5 · Avg AC kW</span></div>
+    <table><thead><tr><th>Inverter</th><th>Avg AC</th><th>Status</th></tr></thead><tbody id="plant2Table"></tbody></table>
+    <div class="insight-note" id="plant2Note"></div>
+  </div>
+  <div class="card">
+    <div class="chead"><h3>Maintenance Alerts</h3><span class="tag">Irradiation &gt; 0.1 but AC = 0</span></div>
+    <div id="alertsList"></div>
+    <div class="insight-note" id="alertsNote"></div>
+  </div>
+</div>
+
+<footer>Solar Power Master Dataset · GitHub Pages Dashboard · Data source: <b>data/solar_data.csv</b> · Auto-refresh: every 5 minutes</footer>
+
+<script>
+const C={blue:'#3B82F6',yellow:'#FACC15',green:'#22C55E',orange:'#F97316',red:'#EF4444',muted:'#8A94A6',grid:'rgba(255,255,255,0.05)'};
+Chart.defaults.color=C.muted; Chart.defaults.font.family="'Segoe UI',sans-serif"; Chart.defaults.font.size=11;
+let charts=[];
+
+function fmt(n,d=1){return Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+function corr(a,b){
+  const n=a.length; if(!n)return 0;
+  let sa=0,sb=0,saa=0,sbb=0,sab=0;
+  for(let i=0;i<n;i++){sa+=a[i];sb+=b[i];saa+=a[i]*a[i];sbb+=b[i]*b[i];sab+=a[i]*b[i]}
+  const num=n*sab-sa*sb, den=Math.sqrt((n*saa-sa*sa)*(n*sbb-sb*sb));
+  return den?num/den:0;
+}
+function shortId(id){return '…'+String(id).slice(-6)}
+function statusFor(rank,rows){
+  if(rank===0)return ['Best','g']; if(rank===1)return ['Top','g'];
+  if(rank===rows.length-1)return ['Lowest','y'];
+  return ['Watch','y'];
+}
+function renderInverterTable(plant, tbodyId, noteId, rows){
+  const sorted=[...rows].sort((a,b)=>b.avgAC-a.avgAC);
+  const shown=[...sorted.slice(0,3),...sorted.slice(-2)];
+  document.getElementById(tbodyId).innerHTML=shown.map((r,i)=>{
+    const rank=sorted.indexOf(r), s=statusFor(rank,sorted);
+    return `<tr><td>${shortId(r.id)}</td><td>${fmt(r.avgAC,1)}</td><td><span class="badge ${s[1]}">${s[0]}</span></td></tr>`;
+  }).join('');
+  const spread=(sorted[0].avgAC-sorted[sorted.length-1].avgAC)/sorted[0].avgAC*100;
+  document.getElementById(noteId).textContent=`Spread across ${plant} inverters is ${fmt(spread,1)}% — ${spread<15?'a healthy, well-balanced fleet.':'wider than Plant_1; prioritize the lowest performers.'}`;
+}
+function gauge(id,val,color){
+  return new Chart(document.getElementById(id),{type:'doughnut',data:{datasets:[{data:[Math.max(0,Math.min(100,val)),100-Math.max(0,Math.min(100,val))],backgroundColor:[color,'rgba(255,255,255,.06)'],borderWidth:0}]},options:{cutout:'75%',plugins:{legend:{display:false},tooltip:{enabled:false}},maintainAspectRatio:false}});
+}
+
+async function loadDashboard(){
+  const errorBox=document.getElementById('errorBox');
+  errorBox.style.display='none';
+  try{
+    // Timestamp avoids showing a browser-cached copy after the CSV is committed on GitHub.
+    const response=await fetch('data/solar_data.csv?v='+Date.now(),{cache:'no-store'});
+    if(!response.ok) throw new Error(`Could not load data/solar_data.csv (HTTP ${response.status})`);
+    const csvText=await response.text();
+    const parsed=Papa.parse(csvText,{header:true,dynamicTyping:true,skipEmptyLines:true});
+    if(parsed.errors.length) console.warn(parsed.errors.slice(0,5));
+
+    const rows=parsed.data.filter(r=>r.DATE_TIME && r.PLANT_LABEL);
+    const plants=[...new Set(rows.map(r=>r.PLANT_LABEL))];
+    const dates=rows.map(r=>new Date(r.DATE_TIME)).filter(d=>!isNaN(d));
+    const minDate=new Date(Math.min(...dates)), maxDate=new Date(Math.max(...dates));
+    const fmtDate=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    document.getElementById('subtitle').textContent=`${plants.join(' & ')} · 15-minute interval telemetry · ${fmtDate(minDate)} – ${fmtDate(maxDate)} · ${new Set(rows.map(r=>r.INVERTER_KEY)).size} inverters`;
+    document.getElementById('dataStatus').textContent=`Data connected · ${rows.length.toLocaleString()} records · ${parsed.errors.length?parsed.errors.length+' parse warnings':'0 parse errors'}`;
+
+    const avgAC=rows.reduce((s,r)=>s+(+r.AC_POWER||0),0)/rows.length;
+    const avgIrr=rows.reduce((s,r)=>s+(+r.IRRADIATION||0),0)/rows.length;
+    const avgMod=rows.reduce((s,r)=>s+(+r.MODULE_TEMPERATURE||0),0)/rows.length;
+    const avgAmb=rows.reduce((s,r)=>s+(+r.AMBIENT_TEMPERATURE||0),0)/rows.length;
+    const totalEnergy=rows.reduce((s,r)=>s+(+r.AC_POWER||0),0)*0.25/1000;
+
+    const plantStats={};
+    for(const p of plants){
+      const pr=rows.filter(r=>r.PLANT_LABEL===p);
+      plantStats[p]={avgAC:pr.reduce((s,r)=>s+(+r.AC_POWER||0),0)/pr.length,avgDC:pr.reduce((s,r)=>s+(+r.DC_POWER||0),0)/pr.length,rows:pr};
+    }
+    const best=plants.slice().sort((a,b)=>plantStats[b].avgAC-plantStats[a].avgAC)[0];
+
+    document.getElementById('kpiEnergy').innerHTML=`${fmt(totalEnergy,0)} <span style="font-size:12px;color:var(--muted)">MWh</span>`;
+    document.getElementById('kpiAvgAC').innerHTML=`${fmt(avgAC,1)} <span style="font-size:12px;color:var(--muted)">kW</span>`;
+    document.getElementById('kpiIrr').innerHTML=`${fmt(avgIrr,3)} <span style="font-size:12px;color:var(--muted)">kW/m²</span>`;
+    document.getElementById('kpiMod').innerHTML=`${fmt(avgMod,1)}°<span style="font-size:12px;color:var(--muted)">C</span>`;
+    document.getElementById('tempDelta').textContent=`+${fmt(avgMod-avgAmb,1)}° over ambient`;
+    document.getElementById('kpiBest').textContent=best;
+    document.getElementById('bestDelta').textContent=plants.map(p=>`${p}: ${fmt(plantStats[p].avgAC,1)} kW`).join(' · ');
+
+    const under=rows.filter(r=>(+r.IRRADIATION||0)>0.1 && (+r.AC_POWER||0)===0);
+    document.getElementById('kpiAlerts').textContent=under.length.toLocaleString();
+
+    // Hourly average AC
+    const hours=[...Array(24).keys()];
+    const hourlyData=p=>hours.map(h=>{const x=plantStats[p].rows.filter(r=>new Date(r.DATE_TIME).getHours()===h);return x.length?x.reduce((s,r)=>s+(+r.AC_POWER||0),0)/x.length:0});
+    charts.push(new Chart(document.getElementById('hourlyChart'),{type:'line',data:{labels:hours.map(h=>h+':00'),datasets:[
+      {label:plants[0],data:hourlyData(plants[0]),borderColor:C.blue,backgroundColor:'rgba(59,130,246,.15)',fill:true,tension:.35,pointRadius:0,borderWidth:2},
+      {label:plants[1],data:hourlyData(plants[1]),borderColor:C.yellow,backgroundColor:'rgba(250,204,21,.10)',fill:true,tension:.35,pointRadius:0,borderWidth:2}
+    ]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},title:{display:true,text:'kW'}}},maintainAspectRatio:false}}));
+
+    // Conversion gauges: preserve the dataset's documented Plant_2 DC scale issue.
+    const rawRatio1=plantStats[plants[0]].avgAC/plantStats[plants[0]].avgDC*100;
+    const rawRatio2=plantStats[plants[1]].avgAC/plantStats[plants[1]].avgDC*100;
+    const ratio1=rawRatio1*10, ratio2=rawRatio2;
+    document.getElementById('ratioP1').textContent=fmt(ratio1,1)+'%'; document.getElementById('ratioP1').style.color=C.green;
+    document.getElementById('ratioP2').textContent=fmt(ratio2,1)+'%'; document.getElementById('ratioP2').style.color=C.red;
+    charts.push(gauge('gaugeP1',ratio1,C.green),gauge('gaugeP2',ratio2,C.red));
+
+    // Daily yield = maximum recorded DAILY_YIELD per plant/day, matching the original dashboard logic.
+    const dayMap={};
+    rows.forEach(r=>{
+      const d=new Date(r.DATE_TIME); const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      dayMap[key] ||= {}; dayMap[key][r.PLANT_LABEL]=Math.max(dayMap[key][r.PLANT_LABEL]||0,+r.DAILY_YIELD||0);
+    });
+    const dayKeys=Object.keys(dayMap).sort();
+    const labels=dayKeys.map(k=>{const [y,m,d]=k.split('-');return `${m}/${d}`});
+    document.getElementById('trendTag').textContent=`${dayKeys.length}-Day Trend`;
+    charts.push(new Chart(document.getElementById('dailyChart'),{type:'line',data:{labels,datasets:[
+      {label:plants[0],data:dayKeys.map(k=>dayMap[k][plants[0]]||null),borderColor:C.blue,backgroundColor:'rgba(59,130,246,.08)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+      {label:plants[1],data:dayKeys.map(k=>dayMap[k][plants[1]]||null),borderColor:C.yellow,backgroundColor:'rgba(250,204,21,.06)',fill:true,tension:.3,pointRadius:0,borderWidth:2}
+    ]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{grid:{color:C.grid},title:{display:true,text:'Daily Yield'}}},maintainAspectRatio:false}}));
+
+    const ac=rows.map(r=>+r.AC_POWER||0);
+    const corrFields=[['Irradiation','IRRADIATION',C.green],['Module Temp','MODULE_TEMPERATURE',C.blue],['DC Power','DC_POWER',C.blue],['Ambient Temp','AMBIENT_TEMPERATURE',C.orange],['Daily Yield','DAILY_YIELD',C.muted]];
+    const corrs=corrFields.map(([label,key,color])=>[label,corr(ac,rows.map(r=>+r[key]||0)),color]);
+    charts.push(new Chart(document.getElementById('corrChart'),{type:'bar',data:{labels:corrs.map(x=>x[0]),datasets:[{data:corrs.map(x=>x[1]),backgroundColor:corrs.map(x=>x[2]),borderRadius:6,barThickness:16}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:1,grid:{color:C.grid}},y:{grid:{display:false}}},maintainAspectRatio:false}}));
+    document.getElementById('corrNote').innerHTML=`<b>Read:</b> ${corrs[0][0]} (${corrs[0][1].toFixed(2)}) and ${corrs[1][0].toLowerCase()} (${corrs[1][1].toFixed(2)}) are the strongest measured relationships with AC power.`;
+
+    // Inverter ranking
+    const invMap={};
+    rows.forEach(r=>{const k=r.PLANT_LABEL+'|'+r.INVERTER_KEY;(invMap[k] ||= {plant:r.PLANT_LABEL,id:r.INVERTER_KEY,sum:0,n:0}).sum+=(+r.AC_POWER||0);invMap[k].n++});
+    const invRows=Object.values(invMap).map(x=>({plant:x.plant,id:x.id,avgAC:x.sum/x.n}));
+    for(const p of plants) renderInverterTable(p,p==='Plant_1'?'plant1Table':'plant2Table',p==='Plant_1'?'plant1Note':'plant2Note',invRows.filter(x=>x.plant===p));
+
+    // Maintenance alerts by inverter
+    const counts={}; under.forEach(r=>{const k=r.PLANT_LABEL+'|'+r.INVERTER_KEY;counts[k]=(counts[k]||0)+1});
+    const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    document.getElementById('alertsList').innerHTML=top.map(([k,n])=>{
+      const [p,id]=k.split('|'); return `<div class="alert-item"><div class="alert-left"><span class="alert-dot"></span>${p} · Inv ${shortId(id)}</div><span class="count-chip">${n}×</span></div>`;
+    }).join('');
+    const plantAlert=plants.map(p=>[p,under.filter(r=>r.PLANT_LABEL===p).length]);
+    document.getElementById('alertsNote').innerHTML=`${plantAlert.map(x=>`${x[0]} logs <b>${x[1].toLocaleString()}</b>`).join(' · ')} daylight zero-output events. Top 5 units are shown above.`;
+
+  }catch(err){
+    console.error(err);
+    errorBox.textContent='Dashboard could not load the CSV. Make sure the repository contains data/solar_data.csv and that GitHub Pages is enabled.';
+    errorBox.style.display='block';
+    document.getElementById('dataStatus').textContent='Data load error';
+  }
+}
+
+loadDashboard();
+setInterval(loadDashboard,5*60*1000);
+</script>
+</body>
+</html>
